@@ -1,0 +1,18 @@
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+eclipse.project.name = appName + '-core'
+
+sourceSets {
+  main {
+    java {
+      srcDirs += "$projectDir/src/main/patch"
+    }
+  }
+}
+
+dependencies {
+  compile "com.badlogicgames.gdx:gdx:$gdxVersion"
+  compile "com.strongjoshua:libgdx-inGameConsole:$inGameConsoleVersion"
+  compile "com.kotcrab.vis:vis-ui:$visUiVersion"
+  compile "org.lwjgl:lwjgl-opengl:3.2.0"
+}
+        
