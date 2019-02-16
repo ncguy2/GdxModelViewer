@@ -12,10 +12,11 @@ public class DockableTab extends Tab implements IDockableContainer {
     protected Table table;
 
     public DockableTab() {
+        this(false, false);
     }
 
     public DockableTab(boolean savable) {
-        super(savable);
+        super(savable, false);
     }
 
     public DockableTab(boolean savable, boolean closeableByUser) {
@@ -23,12 +24,13 @@ public class DockableTab extends Tab implements IDockableContainer {
     }
 
     public DockableTab(IDockable content) {
+        super(false, false);
         this.content = content;
         content.setParent(this);
     }
 
     public DockableTab(boolean savable, IDockable content) {
-        super(savable);
+        super(savable, false);
         this.content = content;
     }
 

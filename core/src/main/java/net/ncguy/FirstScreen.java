@@ -97,14 +97,12 @@ public class FirstScreen implements Screen {
         viewport = new WorldViewport(fboBuilder, false, renderer, worldRenderProvider);
         viewport.AttachListeners();
 
-        openModel("J:\\Character Meshes\\Mythra\\Mythra.g3dj");
-
         root = new VisTable();
 
         VisTable sidebar = new VisTable();
         sidebar.setBackground("window-border-bg");
 
-        FileTree fileTree = new FileTree(new File("J:\\Character Meshes\\Mythra"));
+        FileTree fileTree = new FileTree(new File("."));
         fileTree.addSelectionListener(this::openFile);
         TabContainer sidebarContainer = new TabContainer();
         sidebarContainer.addTab(new DockableFileTree("File browser", fileTree));
@@ -120,8 +118,6 @@ public class FirstScreen implements Screen {
             @Override
             public boolean mouseMoved(InputEvent event, float x, float y) {
                 pane.layout();
-                actor.setDebug(true);
-                actor2.setDebug(true);
                 return super.mouseMoved(event, x, y);
             }
         });
@@ -181,8 +177,6 @@ public class FirstScreen implements Screen {
 
         stage.act(delta);
         stage.draw();
-
-        stage.setDebugAll(false);
     }
 
     @Override

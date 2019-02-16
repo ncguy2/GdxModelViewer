@@ -64,7 +64,6 @@ public abstract class Viewport extends Group implements AutoCloseable, Disposabl
     protected void setDrawable(Drawable drawable) {
         image.setDrawable(drawable);
         image.setBounds(0, 0, getWidth(), getHeight());
-        image.setDebug(false);
     }
 
     @Override
