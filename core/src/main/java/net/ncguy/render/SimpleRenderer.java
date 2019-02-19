@@ -13,8 +13,6 @@ import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
 import net.ncguy.shader.GridShader;
 
-import static net.ncguy.FirstScreen.currentHeightOffset;
-
 public class SimpleRenderer extends BasicRenderer {
 
     private ModelBatch mBatch;
@@ -67,7 +65,7 @@ public class SimpleRenderer extends BasicRenderer {
     public void render(RenderableProvider provider) {
         floorInstance.transform.setToRotation(Vector3.Z, 180);
         floorInstance.transform.scale(1000000, 1, 1000000);
-        floorInstance.transform.translate(0, currentHeightOffset, 0);
+        floorInstance.transform.translate(0, 1, 0);
 
         if(Gdx.input.isKeyJustPressed(Input.Keys.R)) {
             reGridShader();
@@ -97,6 +95,18 @@ public class SimpleRenderer extends BasicRenderer {
     @Override
     public Camera camera() {
         return pCamera;
+    }
+
+    @Override
+    public void setActiveAttachment(int index) {
+
+    }
+
+    @Override
+    public Attachment[] getAttachments() {
+        return new Attachment[] {
+                new Attachment(0, "Output")
+        };
     }
 
 }

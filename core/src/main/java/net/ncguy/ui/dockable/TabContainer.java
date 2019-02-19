@@ -11,6 +11,9 @@ import net.ncguy.utils.StageUtils;
 
 public class TabContainer extends VisTable implements IPanel {
 
+    private transient VisTable privateParent;
+
+    DockableTab currentTab;
     DockableTabContainer dock;
     VisTable contentTable;
 
@@ -62,8 +65,14 @@ public class TabContainer extends VisTable implements IPanel {
             public void switchedTab(Tab tab) {
                 super.switchedTab(tab);
                 contentTable.clearChildren();
-                if(tab != null)
-                    contentTable.add(tab.getContentTable()).grow();
+                if(tab != null) {
+                    contentTable.add(tab.getContentTable()).grow().pad(1);
+                    if(tab instanceof DockableTab) {
+                        currentTab = (DockableTab) tab;
+                    }else{
+                        currentTab = null;
+                    }
+                }
             }
         });
     }
@@ -74,6 +83,9 @@ public class TabContainer extends VisTable implements IPanel {
         Value widthVal = new Value() {
             @Override
             public float get(Actor context) {
+                if(context == null) {
+                    return 0;
+                }
                 if(context.hasParent()) {
                     context = context.getParent();
                 }
@@ -84,12 +96,18 @@ public class TabContainer extends VisTable implements IPanel {
         Value contentHeightVal = new Value() {
             @Override
             public float get(Actor context) {
+                if(context == null) {
+                    return 0;
+                }
                 if(context.hasParent()) {
                     context = context.getParent();
                 }
                 return context.getHeight() - 24;
             }
         };
+
+        defaults().spaceLeft(4).spaceRight(4);
+        defaults().padLeft(4).padRight(4);
 
         add(dock.getTabsPane()).fillX().width(widthVal).height(24).row();
         add(contentTable).fill().width(widthVal).height(contentHeightVal).row();

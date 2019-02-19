@@ -21,4 +21,22 @@ public abstract class BasicRenderer {
 
     public abstract Camera camera();
 
+    public abstract void setActiveAttachment(int index);
+    public abstract Attachment[] getAttachments();
+
+    public static class Attachment {
+        public int index;
+        public String displayName;
+
+        public Attachment(int index, String displayName) {
+            this.index = index;
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
 }

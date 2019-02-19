@@ -6,8 +6,10 @@ import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Disposable;
@@ -22,8 +24,9 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public abstract class Viewport extends Group implements AutoCloseable, Disposable {
+public abstract class Viewport extends Table implements AutoCloseable, Disposable {
 
+    protected FBO.Builder fboBuilder;
     protected FBO fbo;
     public WeakReference<Viewport> ref;
     public InputProcessor processor;
@@ -31,10 +34,8 @@ public abstract class Viewport extends Group implements AutoCloseable, Disposabl
     protected Camera mainCamera;
 
     public Viewport(FBO.Builder fboBuilder, boolean autoAttachListeners) {
-        this(fboBuilder.Build(), autoAttachListeners);
-    }
-    public Viewport(FBO fbo, boolean autoAttachListeners) {
-        this.fbo = fbo;
+        this.fboBuilder = fboBuilder;
+        this.fbo = fboBuilder.Build();
 
         Init();
 
@@ -43,14 +44,21 @@ public abstract class Viewport extends Group implements AutoCloseable, Disposabl
     }
 
     public void render() {
-        if (!isVisible() || fbo == null) return;
+        if (!isVisible()) return;
 
         PreRender();
 
-        fbo.begin();
-        fbo.clear(0, 0 ,0, 1, true);
+        fbo().begin();
+        fbo().clear(0, 0 ,0, 1, true);
         DoRender();
-        fbo.end();
+        fbo().end();
+    }
+
+    public FBO fbo() {
+        if(fbo == null) {
+           fbo = fboBuilder.Build();
+        }
+        return fbo;
     }
 
     @Override
@@ -69,7 +77,9 @@ public abstract class Viewport extends Group implements AutoCloseable, Disposabl
     @Override
     protected void setParent(Group parent) {
         super.setParent(parent);
-        viewports.add(ref = new WeakReference<>(this));
+        if(ref == null) {
+            viewports.add(ref = new WeakReference<>(this));
+        }
     }
 
     public void Init() {
@@ -104,7 +114,7 @@ public abstract class Viewport extends Group implements AutoCloseable, Disposabl
         float w = Math.max(width, 1);
         float h = Math.max(height, 1);
 
-        fbo.Resize(Math.round(w), Math.round(h));
+        fbo().Resize(Math.round(w), Math.round(h));
         DoResize(w, h);
         ResizeCamera(w, h);
     }
@@ -133,11 +143,6 @@ public abstract class Viewport extends Group implements AutoCloseable, Disposabl
 
     @Override
     public boolean remove() {
-        try {
-            close();
-        }catch (Exception e) {
-            e.printStackTrace();
-        }
         return super.remove();
     }
 
@@ -147,9 +152,11 @@ public abstract class Viewport extends Group implements AutoCloseable, Disposabl
             fbo.dispose();
             fbo = null;
         }
-        viewports.remove(ref);
-        ref.clear();
-        ref = null;
+        if(ref != null) {
+            viewports.remove(ref);
+            ref.clear();
+            ref = null;
+        }
     }
 
     public void setMainCamera(Camera mainCamera) {
@@ -171,6 +178,8 @@ public abstract class Viewport extends Group implements AutoCloseable, Disposabl
         viewports.stream()
                 .map(WeakReference::get)
                 .filter(Objects::nonNull)
+                .filter(Actor::isVisible)
+                .filter(Actor::hasParent)
                 .forEach(task);
     }
 

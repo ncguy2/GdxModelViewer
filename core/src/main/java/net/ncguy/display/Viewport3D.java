@@ -27,10 +27,6 @@ public abstract class Viewport3D extends Viewport {
         super(fboBuilder, autoAttachListeners);
     }
 
-    public Viewport3D(FBO fbo, boolean autoAttachListeners) {
-        super(fbo, autoAttachListeners);
-    }
-
     @Override
     public void DoInit() {
         env = new Environment();
@@ -53,6 +49,13 @@ public abstract class Viewport3D extends Viewport {
         ssShader.init();
     }
 
+    public FBO ssFbo() {
+        if (ssFbo == null) {
+            ssFbo = new FBO(Pixmap.Format.RGBA8888, 128, 128, true).Name("SS FBO");
+        }
+        return ssFbo;
+    }
+
     public void setDrawAxis(boolean drawAxis) {
         this.drawAxis = drawAxis;
     }
@@ -60,8 +63,8 @@ public abstract class Viewport3D extends Viewport {
     @Override
     public void act(float delta) {
         super.act(delta);
-        if(!drawAxis || ssFbo == null) return;
-        ssImage.setDrawable(ssFbo.getColorBufferTexture());
+        if(!drawAxis) return;
+        ssImage.setDrawable(ssFbo().getColorBufferTexture());
         ssImage.setBounds(getX() + ssOffset.x, getY() + ssOffset.y, 128, -128);
     }
 
@@ -77,7 +80,7 @@ public abstract class Viewport3D extends Viewport {
         if(drawAxis) {
             ssCamera.update();
 
-            ssFbo.begin();
+            ssFbo().begin();
             Gdx.gl.glClearColor(0, 0, 0, 0);
             Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
             coordAxis.transform.idt();
@@ -92,7 +95,7 @@ public abstract class Viewport3D extends Viewport {
             ssBatch.render(coordAxis, env, ssShader);
             ssBatch.end();
 
-            ssFbo.end();
+            ssFbo().end();
         }
     }
 

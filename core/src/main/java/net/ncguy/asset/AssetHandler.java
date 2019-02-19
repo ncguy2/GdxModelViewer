@@ -338,8 +338,6 @@ public class AssetHandler implements Disposable {
         if (path == null || path.isEmpty())
             return;
 
-        path = path.toLowerCase();
-
         if (manager.isLoaded(path, type)) {
             func.accept(manager.get(path, type));
             return;

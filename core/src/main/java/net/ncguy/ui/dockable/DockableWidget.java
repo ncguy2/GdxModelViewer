@@ -33,4 +33,5 @@ public abstract class DockableWidget implements IDockable {
         }
         return title;
     }
+
 }

@@ -1,7 +1,6 @@
 package net.ncguy.render;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
@@ -10,12 +9,20 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Pool;
+import net.ncguy.shader.GridMeshShader;
 import net.ncguy.shader.StandardSkeletalMeshShader;
 import net.ncguy.shader.StandardStaticMeshShader;
 import org.lwjgl.opengl.GL14;
+
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.badlogic.gdx.graphics.GL20.GL_FLOAT;
 import static com.badlogic.gdx.graphics.GL20.GL_RGB;
@@ -39,6 +46,7 @@ public class DeferredRenderer extends BasicRenderer {
         builder.addBasicColorTextureAttachment(Pixmap.Format.RGB888);   // Normal[888]
         builder.addBasicColorTextureAttachment(Pixmap.Format.RGBA8888); // Albedo[888] + Alpha[8]
         builder.addBasicColorTextureAttachment(Pixmap.Format.RGB888);   // Specular[8] + empty channels[88]
+        builder.addBasicColorTextureAttachment(Pixmap.Format.RGB888);   // UV[88] + empty channel[8]
 
         builder.addDepthRenderBuffer(GL14.GL_DEPTH_COMPONENT32);
         fbo = builder.Build();
@@ -56,6 +64,11 @@ public class DeferredRenderer extends BasicRenderer {
         batch = new ModelBatch(new DefaultShaderProvider() {
             @Override
             protected Shader createShader(Renderable renderable) {
+
+                if(Objects.equals(renderable.material.id, "grid")) {
+                    return new GridMeshShader(renderable);
+                }
+
                 if(renderable.bones != null && renderable.bones.length > 0) {
                     return new StandardSkeletalMeshShader(renderable);
                 }
@@ -72,17 +85,33 @@ public class DeferredRenderer extends BasicRenderer {
         fbo.begin();
         fbo.clear(0, 0, 0, 1, true);
         batch.begin(camera);
-        batch.render(provider, environment);
+
+        Array<Renderable> renderables = new Array<>();
+        provider.getRenderables(renderables, new Pool<Renderable>() {
+            @Override
+            protected Renderable newObject() {
+                return new Renderable();
+            }
+        });
+
+        Map<Boolean, List<Renderable>> collect = Stream.of(renderables.toArray())
+                .collect(Collectors.groupingBy(r -> r.material.has(FloatAttribute.AlphaTest)));
+
+        batch.getRenderContext().setDepthMask(true);
+
+        for (Renderable renderable : collect.getOrDefault(true, Collections.emptyList())) {
+            batch.render(renderable);
+        }
+
+        batch.flush();
+        batch.getRenderContext().setDepthMask(false);
+
+        for (Renderable renderable : collect.getOrDefault(false, Collections.emptyList())) {
+            batch.render(renderable);
+        }
+
         batch.end();
         fbo.end();
-
-        if(Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
-            texId--;
-            if(texId < 0)
-                texId += fbo.getAttachmentCount();
-        }else if(Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
-            texId++;
-        }
 
         TextureRegion reg = new TextureRegion(fbo.getTextureWrapped(texId));
         reg.flip(false, false);
@@ -123,6 +152,22 @@ public class DeferredRenderer extends BasicRenderer {
     @Override
     public Camera camera() {
         return camera;
+    }
+
+    @Override
+    public void setActiveAttachment(int index) {
+        texId = index;
+    }
+
+    @Override
+    public Attachment[] getAttachments() {
+        return new Attachment[]{
+                new Attachment(0, "Position"),
+                new Attachment(1, "Normal"),
+                new Attachment(2, "Diffuse"),
+                new Attachment(3, "Specular"),
+                new Attachment(4, "UV coordinates")
+        };
     }
 
 }

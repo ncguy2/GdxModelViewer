@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.GLFrameBuffer;
 import com.badlogic.gdx.utils.Disposable;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -175,6 +176,14 @@ public class FBO implements Disposable, StackableFBO {
     public void clear(float r, float g, float b, float a, boolean clearDepth) {
         Gdx.gl.glClearColor(r, g, b, a);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | (clearDepth ? GL20.GL_DEPTH_BUFFER_BIT : 0));
+    }
+
+    public ByteBuffer getPixels(int format, int type) {
+        ByteBuffer b = ByteBuffer.allocateDirect(getWidth() * getHeight() * 4);
+        begin();
+        Gdx.gl20.glReadPixels(0, 0, getWidth(), getHeight(), format, type, b);
+        end();
+        return b;
     }
 
     public static class Builder extends FrameBufferBuilder {

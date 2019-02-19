@@ -1,6 +1,7 @@
 package net.ncguy.ui.dockable;
 
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.kotcrab.vis.ui.widget.VisTable;
 import net.ncguy.ui.FileTree;
 
 import java.io.File;
@@ -9,6 +10,7 @@ import java.util.Optional;
 public class DockableFileTree extends DockableWidget {
 
     protected FileTree fileTree;
+    protected VisTable table;
 
     public DockableFileTree() {
         this("Window");
@@ -38,6 +40,12 @@ public class DockableFileTree extends DockableWidget {
 
     @Override
     public Optional<Table> getRootTable() {
-        return Optional.of(fileTree);
+
+        if (table == null) {
+            table = new VisTable();
+            table.add(fileTree).grow().pad(1).row();
+        }
+
+        return Optional.of(table);
     }
 }

@@ -5,32 +5,31 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.VertexAttributes;
+import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
-import com.badlogic.gdx.math.collision.BoundingBox;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.IntAttribute;
+import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.kotcrab.vis.ui.util.ToastManager;
 import com.kotcrab.vis.ui.widget.MultiSplitPane;
-import com.kotcrab.vis.ui.widget.VisSplitPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import net.ncguy.asset.AssetHandler;
+import net.ncguy.display.ModelViewportWrapper;
+import net.ncguy.display.TextureViewportWrapper;
 import net.ncguy.display.Viewport3D;
-import net.ncguy.display.WorldViewport;
-import net.ncguy.render.BasicRenderer;
-import net.ncguy.render.DeferredRenderer;
 import net.ncguy.render.FBO;
-import net.ncguy.render.WorldRenderProvider;
 import net.ncguy.ui.FileTree;
 import net.ncguy.ui.Toaster;
-import net.ncguy.ui.dockable.*;
+import net.ncguy.ui.dockable.DockableFileTree;
+import net.ncguy.ui.dockable.TabContainer;
 
 import java.io.File;
-import java.util.Optional;
 
 /** First screen of the application. Displayed after the application is created. */
 public class FirstScreen implements Screen {
@@ -38,18 +37,18 @@ public class FirstScreen implements Screen {
     Stage stage;
     Viewport stageViewport;
     OrthographicCamera stageCamera;
+    TabContainer viewportContainer;
 
-    WorldViewport viewport;
-    ModelInstance instance;
+    Model gridModel;
+    ModelInstance gridInstance;
 
     Table root;
     float targetHeight = 175;
 
     ToastManager toastManager;
+    FBO.Builder fboBuilder;
 
-    public static float currentHeightOffset;
-
-    public float calculateScaleFactor(float currentHeight) {
+   public float calculateScaleFactor(float currentHeight) {
         if(currentHeight == 0.f) {
             return 1;
         }
@@ -57,25 +56,15 @@ public class FirstScreen implements Screen {
     }
 
     public void openModel(String ref) {
-        AssetHandler.instance().GetAsync(ref, Model.class, this::setModelInstance);
+        ModelViewportWrapper tab = new ModelViewportWrapper(gridModel, fboBuilder);
+        viewportContainer.addTab(tab);
+        tab.loadModelInstance(ref);
     }
 
     private void openTexture(String absolutePath) {
-
-    }
-
-    private void setModelInstance(Model model) {
-        instance = new ModelInstance(model);
-        BoundingBox bounds = new BoundingBox();
-        instance.calculateBoundingBox(bounds);
-        float scaleFactor = calculateScaleFactor(bounds.getHeight());
-
-        instance.transform.setToScaling(scaleFactor, scaleFactor, scaleFactor);
-        instance.calculateBoundingBox(bounds);
-
-        float yOffset = bounds.getCenterY();
-        instance.transform.translate(0, -yOffset, 0);
-        currentHeightOffset = yOffset * scaleFactor;
+        TextureViewportWrapper tab = new TextureViewportWrapper();
+        viewportContainer.addTab(tab);
+        tab.setImgRef(absolutePath);
     }
 
     @Override
@@ -87,41 +76,38 @@ public class FirstScreen implements Screen {
         stageViewport = new ScreenViewport(stageCamera);
         stage = new Stage(stageViewport);
 
-        FBO.Builder fboBuilder = new FBO.Builder(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        fboBuilder = new FBO.Builder(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         fboBuilder.addColorTextureAttachment(GL30.GL_RGB32F, GL20.GL_RGB, GL20.GL_FLOAT);
         fboBuilder.addDepthRenderBuffer(GL30.GL_DEPTH_COMPONENT32F);
 
-        BasicRenderer renderer = new DeferredRenderer();
-        WorldRenderProvider worldRenderProvider = new WorldRenderProvider(() -> instance);
 
-        viewport = new WorldViewport(fboBuilder, false, renderer, worldRenderProvider);
-        viewport.AttachListeners();
+        long gridAttrs = VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates;
+        Material gridMtl = new Material();
+        gridMtl.id = "grid";
+        gridMtl.set(IntAttribute.createCullFace(0));
+        gridMtl.set(FloatAttribute.createAlphaTest(0.1f));
+        gridModel = new ModelBuilder().createRect(
+                -1, 0, -1,
+                 1, 0, -1,
+                 1, 0,  1,
+                -1, 0,  1,
+                 0, 1, 0,
+                gridMtl, gridAttrs
+        );
+        gridInstance = new ModelInstance(gridModel);
 
         root = new VisTable();
-
-        VisTable sidebar = new VisTable();
-        sidebar.setBackground("window-border-bg");
 
         FileTree fileTree = new FileTree(new File("."));
         fileTree.addSelectionListener(this::openFile);
         TabContainer sidebarContainer = new TabContainer();
         sidebarContainer.addTab(new DockableFileTree("File browser", fileTree));
-        sidebar.add(sidebarContainer).grow().row();
 
         MultiSplitPane splitPane = new MultiSplitPane(false);
 
-        TabContainer actor = new TabContainer();
-        TabContainer actor2 = new TabContainer();
+        viewportContainer = new TabContainer();
 
-        VisSplitPane pane = new VisSplitPane(actor, actor2, true);
-        pane.addListener(new InputListener() {
-            @Override
-            public boolean mouseMoved(InputEvent event, float x, float y) {
-                pane.layout();
-                return super.mouseMoved(event, x, y);
-            }
-        });
-        splitPane.setWidgets(sidebar, pane, viewport);
+        splitPane.setWidgets(sidebarContainer, viewportContainer);
         splitPane.setSplit(0, .3f);
         root.add(splitPane).grow().row();
 
@@ -131,31 +117,6 @@ public class FirstScreen implements Screen {
 
         toastManager = new ToastManager(stage);
         Toaster.subscribe(toastManager);
-
-        actor.addTabs(new DockableWidget("Tab 1") {
-            @Override
-            public Optional<Table> getRootTable() {
-                VisTable visTable = new VisTable();
-                visTable.add("Test 1");
-                return Optional.of(visTable);
-            }
-        }, new DockableWidget("Tab 2") {
-            @Override
-            public Optional<Table> getRootTable() {
-                VisTable visTable = new VisTable();
-                visTable.add("Test 2");
-                return Optional.of(visTable);
-            }
-        });
-        actor2.addTabs(new DockableWidget("Tab 3") {
-            @Override
-            public Optional<Table> getRootTable() {
-                VisTable visTable = new VisTable();
-                visTable.add("Test 3");
-                return Optional.of(visTable);
-            }
-        });
-
     }
 
     private void openFile(FileTree.FileWrapper f) {
@@ -204,6 +165,7 @@ public class FirstScreen implements Screen {
     @Override
     public void dispose() {
         // Destroy screen's assets here.
+        gridModel.dispose();
         AssetHandler.Dispose();
     }
 }

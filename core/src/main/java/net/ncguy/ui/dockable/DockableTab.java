@@ -24,13 +24,13 @@ public class DockableTab extends Tab implements IDockableContainer {
     }
 
     public DockableTab(IDockable content) {
-        super(false, false);
+        super(content.is(IDockable.SAVEABLE), content.is(IDockable.CLOSABLE));
         this.content = content;
         content.setParent(this);
     }
 
     public DockableTab(boolean savable, IDockable content) {
-        super(savable, false);
+        super(savable, content.is(IDockable.CLOSABLE));
         this.content = content;
     }
 
@@ -85,4 +85,5 @@ public class DockableTab extends Tab implements IDockableContainer {
         }
         return table;
     }
+
 }

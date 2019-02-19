@@ -126,7 +126,7 @@ public class DockableWindow extends VisWindow implements IDockableContainer {
             fadeOut(0.15f);
         }else{
             content.setParent(this);
-            content.getRootTable().ifPresent(this::add);
+            content.getRootTable().ifPresent(t -> this.add(t).space(4));
             getTitleLabel().setText(content.getTitle());
         }
     }

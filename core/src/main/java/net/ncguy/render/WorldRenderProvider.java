@@ -6,13 +6,15 @@ import com.badlogic.gdx.graphics.g3d.RenderableProvider;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 public class WorldRenderProvider implements RenderableProvider {
 
-    private Supplier<ModelInstance> instanceSupplier;
+    private Supplier<List<ModelInstance>> instanceSupplier;
 
-    public WorldRenderProvider(Supplier<ModelInstance> instanceSupplier) {
+    public WorldRenderProvider(Supplier<List<ModelInstance>> instanceSupplier) {
         this.instanceSupplier = instanceSupplier;
     }
 
@@ -22,11 +24,13 @@ public class WorldRenderProvider implements RenderableProvider {
             return;
         }
 
-        ModelInstance modelInstance = instanceSupplier.get();
-        if (modelInstance == null) {
+        List<ModelInstance> modelInstance = instanceSupplier.get();
+        if (modelInstance == null || modelInstance.isEmpty()) {
             return;
         }
 
-        modelInstance.getRenderables(renderables, pool);
+        modelInstance.stream()
+                .filter(Objects::nonNull)
+                .forEach(inst -> inst.getRenderables(renderables, pool));
     }
 }
